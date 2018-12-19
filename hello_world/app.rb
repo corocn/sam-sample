@@ -1,83 +1,106 @@
-require 'httparty'
+require 'thinreports'
 require 'json'
+require 'base64'
 
 def lambda_handler(event:, context:)
-  # Sample pure Lambda function
-
-  # Parameters
-  # ----------
-  # event: Hash, required
-  #     API Gateway Lambda Proxy Input Format
-
-  #     {
-  #         "resource": "Resource path",
-  #         "path": "Path parameter",
-  #         "httpMethod": "Incoming request's method name"
-  #         "headers": {Incoming request headers}
-  #         "queryStringParameters": {query string parameters }
-  #         "pathParameters":  {path parameters}
-  #         "stageVariables": {Applicable stage variables}
-  #         "requestContext": {Request context, including authorizer-returned key-value pairs}
-  #         "body": "A JSON string of the request payload."
-  #         "isBase64Encoded": "A boolean flag to indicate if the applicable request payload is Base64-encode"
-  #     }
-
-  #     https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
-
-  # context: object, required
-  #     Lambda Context runtime methods and attributes
-
-  # Attributes
-  # ----------
-
-  # context.aws_request_id: str
-  #      Lambda request ID
-  # context.client_context: object
-  #      Additional context when invoked through AWS Mobile SDK
-  # context.function_name: str
-  #      Lambda function name
-  # context.function_version: str
-  #      Function version identifier
-  # context.get_remaining_time_in_millis: function
-  #      Time in milliseconds before function times out
-  # context.identity:
-  #      Cognito identity provider context when invoked through AWS Mobile SDK
-  # context.invoked_function_arn: str
-  #      Function ARN
-  # context.log_group_name: str
-  #      Cloudwatch Log group name
-  # context.log_stream_name: str
-  #      Cloudwatch Log stream name
-  # context.memory_limit_in_mb: int
-  #     Function memory
-
-  # Returns
-  # ------
-  # API Gateway Lambda Proxy Output Format: dict
-  #     'statusCode' and 'body' are required
-
-  #     {
-  #         "isBase64Encoded": true | false,
-  #         "statusCode": httpStatusCode,
-  #         "headers": {"headerName": "headerValue", ...},
-  #         "body": "..."
-  #     }
-
-  #     # api-gateway-simple-proxy-for-lambda-output-format
-  #     https: // docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
-
-  begin
-    response = HTTParty.get('http://checkip.amazonaws.com/')
-  rescue HTTParty::Error => error
-    puts error.inspect
-    raise error
+  # あとでS3から読むようにしようね
+  File.open("/tmp/gorilla.tlf", "w") do |f|
+    f.puts layout
   end
-        		
+
+  report = Thinreports::Report.new layout: '/tmp/gorilla.tlf'
+
+  report.start_new_page do |page|
+    page.item(:say).value('ウホホイ')
+  end
+
   return {
-    :statusCode => response.code,
-    :body => {
-      :message => "Hello World!",
-      :location => response.body
-    }.to_json
+    :statusCode => 200,
+    :isBase64Encoded => true,
+    :headers => { 'Content-Type': 'application/pdf' },
+    :body => Base64.encode64(report.generate)
   }
 end
+
+def layout
+lines =<<EOS
+{
+  "version": "0.10.0",
+  "items": [
+    {
+      "id": "title",
+      "type": "text",
+      "display": true,
+      "description": "",
+      "x": 84.1,
+      "y": 63,
+      "width": 200,
+      "height": 33,
+      "style": {
+        "font-family": [
+          "Helvetica"
+        ],
+        "font-size": 18,
+        "color": "#000000",
+        "text-align": "left",
+        "vertical-align": "top",
+        "line-height": "",
+        "line-height-ratio": "",
+        "letter-spacing": "",
+        "font-style": []
+      },
+      "texts": [
+        "ゴリラ"
+      ]
+    },
+    {
+      "id": "say",
+      "type": "text-block",
+      "display": true,
+      "description": "",
+      "x": 96.1,
+      "y": 104,
+      "width": 182,
+      "height": 20.5,
+      "style": {
+        "font-family": [
+          "Helvetica"
+        ],
+        "font-size": 18,
+        "color": "#000000",
+        "text-align": "left",
+        "vertical-align": "top",
+        "line-height": "",
+        "line-height-ratio": "",
+        "letter-spacing": "",
+        "font-style": [],
+        "overflow": "truncate",
+        "word-wrap": "break-word"
+      },
+      "reference-id": "",
+      "value": "",
+      "multiple-line": false,
+      "format": {
+        "base": "",
+        "type": ""
+      }
+    }
+  ],
+  "state": {
+    "layout-guides": []
+  },
+  "title": "sample",
+  "report": {
+    "paper-type": "A4",
+    "orientation": "portrait",
+    "margin": [
+      20,
+      20,
+      20,
+      20
+    ]
+  }
+}
+EOS
+lines
+end  
